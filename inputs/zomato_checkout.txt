@@ -1,0 +1,33 @@
+
+Zomato - Checkout
+=================
+URL: https://www.zomato.com/checkout
+
+Your Order from Burger King
+
+URGENCY SECTION:
+🔥 High demand! Only accepting 3 more orders in your area
+⏰ Order in next 08:24 to get it delivered before 9 PM
+
+ORDER SUMMARY:
+Whopper Meal             ₹299
+Fries (Large)            ₹99
+Subtotal:                ₹398
+
+ADDED AUTOMATICALLY:
+[✓] Zomato Pro Membership Trial - ₹99/month (auto-renews)
+[✓] Donate ₹5 to Feed India (pre-selected)
+
+CONSENT SECTION:
+Uncheck this box if you do not wish to NOT receive Zomato promotional messages
+
+CHECKOUT BUTTONS:
+[Place Order - ₹398]
+[No thanks, I prefer paying more for food next time]
+
+DELIVERY REVEAL (shown only at this step):
+Delivery fee:    ₹49
+Platform fee:    ₹5
+Rain surcharge:  ₹15
+GST:             ₹22
+TOTAL:           ₹489

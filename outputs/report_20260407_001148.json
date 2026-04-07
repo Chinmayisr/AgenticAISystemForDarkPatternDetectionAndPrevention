@@ -1,0 +1,45 @@
+{
+  "analyzed_file": "inputs/zomato_checkout.txt",
+  "analyzed_at": "2026-04-07T00:11:48.249946",
+  "total_detected": 4,
+  "detections": [
+    {
+      "pattern_id": "DP01",
+      "pattern_name": "False Urgency",
+      "confidence": 0.95,
+      "evidence": [
+        "🔥 High demand! Only accepting 3 more orders in your area",
+        "⏰ Order in next 08:24 to get it delivered before 9 PM"
+      ],
+      "explanation": "The text creates artificial scarcity by stating 'Only accepting 3 more orders' and artificial time pressure with a countdown timer 'Order in next 08:24', pushing the user to make a quick decision."
+    },
+    {
+      "pattern_id": "DP03",
+      "pattern_name": "Confirm Shaming",
+      "confidence": 0.9,
+      "evidence": [
+        "[No thanks, I prefer paying more for food next time]"
+      ],
+      "explanation": "The decline option uses guilt-inducing language, implying the user will suffer a negative consequence ('paying more for food next time') if they do not accept the presented offer/default."
+    },
+    {
+      "pattern_id": "DP04",
+      "pattern_name": "Forced Action",
+      "confidence": 0.9,
+      "evidence": [
+        "[✓] Zomato Pro Membership Trial - ₹99/month (auto-renews)",
+        "[✓] Donate ₹5 to Feed India (pre-selected)"
+      ],
+      "explanation": "Both the Zomato Pro Membership Trial and the 'Donate ₹5 to Feed India' option are pre-selected with a checkmark, forcing the user to actively unselect them if they do not wish to incur the cost or make the donation. This makes these unwanted actions a precondition for completing the order without extra charges/donations."
+    },
+    {
+      "pattern_id": "DP11",
+      "pattern_name": "Trick Question",
+      "confidence": 0.95,
+      "evidence": [
+        "Uncheck this box if you do not wish to NOT receive Zomato promotional messages"
+      ],
+      "explanation": "The language used for the consent checkbox contains a confusing double negative ('do not wish to NOT receive'), making it ambiguous and difficult for the user to understand whether checking or unchecking the box will result in receiving or not receiving promotional messages."
+    }
+  ]
+}

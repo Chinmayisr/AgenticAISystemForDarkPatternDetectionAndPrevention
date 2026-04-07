@@ -16,28 +16,28 @@ class Settings(BaseSettings):
     google_api_key: str = Field(..., env="GOOGLE_API_KEY")
 
     # Models
-    orchestrator_model: str = Field("gemini-3.1-pro", env="ORCHESTRATOR_MODEL")
-    nlp_agent_model: str    = Field("gemini-3.1-pro", env="NLP_AGENT_MODEL")
-    visual_agent_model: str = Field("gemini-3.1-pro", env="VISUAL_AGENT_MODEL")
-    prevention_model: str   = Field("gemini-3.1-flash", env="PREVENTION_MODEL")
+    orchestrator_model: str = Field("gemini-2.5-flash", env="ORCHESTRATOR_MODEL")
+    nlp_agent_model: str = Field("gemini-2.5-flash", env="NLP_AGENT_MODEL")
+    visual_agent_model: str = Field("gemini-2.5-flash", env="VISUAL_AGENT_MODEL")
+    prevention_model: str = Field("ggemini-2.5-flash", env="PREVENTION_MODEL")
 
     # Storage
-    redis_url: str      = Field("redis://localhost:6379", env="REDIS_URL")
-    qdrant_url: str     = Field("http://localhost:6333", env="QDRANT_URL")
-    database_url: str   = Field("sqlite:///./dark_guard.db", env="DATABASE_URL")
+    redis_url: str = Field("redis://localhost:6379", env="REDIS_URL")
+    qdrant_url: str = Field("http://localhost:6333", env="QDRANT_URL")
+    database_url: str = Field("sqlite:///./dark_guard.db", env="DATABASE_URL")
 
     # MCP Server
     mcp_host: str = Field("localhost", env="MCP_HOST")
     mcp_port: int = Field(8765, env="MCP_PORT")
 
     # Thresholds
-    high_confidence_threshold: float   = Field(0.80, env="HIGH_CONFIDENCE_THRESHOLD")
+    high_confidence_threshold: float = Field(0.80, env="HIGH_CONFIDENCE_THRESHOLD")
     medium_confidence_threshold: float = Field(0.55, env="MEDIUM_CONFIDENCE_THRESHOLD")
-    low_confidence_threshold: float    = Field(0.35, env="LOW_CONFIDENCE_THRESHOLD")
+    low_confidence_threshold: float = Field(0.35, env="LOW_CONFIDENCE_THRESHOLD")
 
     # App
     environment: str = Field("development", env="ENVIRONMENT")
-    log_level: str   = Field("INFO", env="LOG_LEVEL")
+    log_level: str = Field("INFO", env="LOG_LEVEL")
 
     class Config:
         env_file = ".env"
@@ -73,19 +73,19 @@ PATTERN_TO_AGENT: Dict[str, str] = {
     "DP02": "behavioral",
     "DP03": "nlp",
     "DP04": "nlp",
-    "DP05": "nlp",
+    "DP05": "behavioral",
     "DP06": "visual",
     "DP07": "pricing",
     "DP08": "pricing",
-    "DP09": "visual",
+    "DP09": "nlp",
     "DP10": "behavioral",
     "DP11": "nlp",
-    "DP12": "nlp",
+    "DP12": "behavioral",
     "DP13": "visual",
 }
 
 # Text-based patterns (NLP agent)
-TEXT_PATTERNS: List[str] = ["DP01", "DP03", "DP04", "DP05", "DP10", "DP11", "DP12"]
+TEXT_PATTERNS: List[str] = ["DP01", "DP03", "DP04", "DP09", "DP11"]
 
 # Visual patterns (Visual agent)
 VISUAL_PATTERNS: List[str] = ["DP06", "DP09", "DP13"]
