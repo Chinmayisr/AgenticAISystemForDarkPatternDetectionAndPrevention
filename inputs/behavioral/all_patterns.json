@@ -1,0 +1,157 @@
+
+{
+  "session_id": "combined_session_004",
+  "platform":   "amazon",
+  "url":        "https://www.amazon.in/checkout",
+  "pattern_hint": "all_four_patterns",
+
+  "cart_events": [
+    {
+      "event_id":   "evt_001",
+      "timestamp":  "2024-01-15T11:00:00",
+      "event_type": "user_click",
+      "page":       "product_page",
+      "user_action": {
+        "type":  "add_to_cart",
+        "item":  "Fire TV Stick 4K",
+        "price": 5999.00
+      },
+      "cart_before": [],
+      "cart_after": [
+        {"name": "Fire TV Stick 4K", "price": 5999.00, "qty": 1, "added_by": "user"}
+      ]
+    },
+    {
+      "event_id":   "evt_002",
+      "timestamp":  "2024-01-15T11:01:00",
+      "event_type": "user_click",
+      "page":       "product_page",
+      "user_action": {
+        "type":  "proceed_to_checkout",
+        "item":  null,
+        "price": null
+      },
+      "cart_before": [
+        {"name": "Fire TV Stick 4K", "price": 5999.00, "qty": 1, "added_by": "user"}
+      ],
+      "cart_after": [
+        {"name": "Fire TV Stick 4K",              "price": 5999.00, "qty": 1, "added_by": "user"},
+        {"name": "2-Year Extended Warranty",      "price": 799.00,  "qty": 1, "added_by": "system"},
+        {"name": "Amazon Prime Trial (30 days)",  "price": 0.00,    "qty": 1, "added_by": "system"}
+      ]
+    }
+  ],
+
+  "page_checkboxes": [
+    {
+      "label":        "Add 2-Year Extended Warranty (₹799)",
+      "pre_checked":  true,
+      "user_changed": false,
+      "location":     "product page below add to cart"
+    },
+    {
+      "label":        "Start Amazon Prime free trial — auto-renews at ₹1,499/year",
+      "pre_checked":  true,
+      "user_changed": false,
+      "location":     "checkout page"
+    }
+  ],
+
+  "subscription_flow": {
+    "signup_flow": {
+      "total_steps": 2,
+      "steps": [
+        {"step": 1, "action": "Pre-checked during checkout", "time_seconds": 0},
+        {"step": 2, "action": "Complete purchase",           "time_seconds": 10}
+      ],
+      "auto_renewal_disclosure": {
+        "shown":      true,
+        "location":   "checkbox label in small text",
+        "text":       "auto-renews at ₹1,499/year",
+        "font_size":  "11px",
+        "color":      "#888888",
+        "prominence": "low"
+      },
+      "free_trial": {
+        "offered":                     true,
+        "duration_days":               30,
+        "conversion_reminder_sent":    false,
+        "reminder_days_before_charge": 0,
+        "trial_end_action":            "auto_convert_to_paid"
+      }
+    },
+    "cancellation_flow": {
+      "total_steps": 8,
+      "steps": [
+        {"step": 1, "action": "Go to Account & Lists",              "time_seconds": 5},
+        {"step": 2, "action": "Click Prime Membership",             "time_seconds": 5},
+        {"step": 3, "action": "Click Manage Membership",            "time_seconds": 5},
+        {"step": 4, "action": "Click End Membership",               "time_seconds": 5},
+        {"step": 5, "action": "Dismiss benefits reminder popup",    "time_seconds": 20},
+        {"step": 6, "action": "Choose to End Membership (not pause)","time_seconds": 15},
+        {"step": 7, "action": "Complete exit survey",               "time_seconds": 40},
+        {"step": 8, "action": "Confirm cancellation",               "time_seconds": 10}
+      ],
+      "cancel_button_location":   "Account > Prime > Manage > End Membership",
+      "cancel_button_visibility": "buried",
+      "retention_popups_shown":   3,
+      "mandatory_survey":         true,
+      "instant_cancellation":     false,
+      "access_until":             "end of billing period"
+    }
+  },
+
+  "billing_data": {
+    "plan_name":                          "Amazon Prime",
+    "amount_per_cycle":                   1499.00,
+    "billing_cycle":                      "yearly",
+    "next_billing_date":                  "2025-01-15",
+    "auto_renewal":                       true,
+    "pre_renewal_reminder":               false,
+    "reminder_days_before":               0,
+    "billing_settings_path":             "Account > Prime > Manage > View billing history",
+    "billing_clicks_required":            5,
+    "upgrade_clicks":                     1,
+    "downgrade_clicks":                   8,
+    "downgrade_requires_support":         true,
+    "current_charges_visible_on_dashboard": false,
+    "unexpected_charges": [
+      {
+        "date":        "2024-01-15",
+        "amount":      1499.00,
+        "description": "Annual Prime renewal — user received no reminder",
+        "notified":    false
+      }
+    ]
+  },
+
+  "popup_events": [
+    {
+      "popup_id":       "prime_upsell_01",
+      "popup_type":     "subscription_upsell",
+      "trigger":        "page_load",
+      "text":           "Get FREE delivery with Prime!",
+      "timestamp":      "2024-01-15T11:00:00",
+      "user_dismissed": true,
+      "reappeared":     true
+    },
+    {
+      "popup_id":       "prime_upsell_01",
+      "popup_type":     "subscription_upsell",
+      "trigger":        "add_to_cart",
+      "text":           "Get FREE delivery with Prime!",
+      "timestamp":      "2024-01-15T11:01:00",
+      "user_dismissed": true,
+      "reappeared":     true
+    },
+    {
+      "popup_id":       "prime_upsell_01",
+      "popup_type":     "subscription_upsell",
+      "trigger":        "proceed_to_checkout",
+      "text":           "Get FREE delivery with Prime!",
+      "timestamp":      "2024-01-15T11:02:00",
+      "user_dismissed": false,
+      "reappeared":     false
+    }
+  ]
+}

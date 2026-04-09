@@ -1,0 +1,105 @@
+
+{
+  "session_id": "bs_session_001",
+  "platform": "zomato",
+  "url": "https://www.zomato.com/checkout",
+  "pattern_hint": "basket_sneaking",
+  "cart_events": [
+    {
+      "event_id": "evt_001",
+      "timestamp": "2024-01-15T19:00:00",
+      "event_type": "page_load",
+      "page": "restaurant_menu",
+      "user_action": null,
+      "cart_before": [],
+      "cart_after": []
+    },
+    {
+      "event_id": "evt_002",
+      "timestamp": "2024-01-15T19:01:30",
+      "event_type": "user_click",
+      "page": "restaurant_menu",
+      "user_action": {
+        "type": "add_to_cart",
+        "item": "Chicken Biryani",
+        "price": 299.00
+      },
+      "cart_before": [],
+      "cart_after": [
+        {"name": "Chicken Biryani", "price": 299.00, "qty": 1, "added_by": "user"}
+      ]
+    },
+    {
+      "event_id": "evt_003",
+      "timestamp": "2024-01-15T19:01:45",
+      "event_type": "user_click",
+      "page": "restaurant_menu",
+      "user_action": {
+        "type": "add_to_cart",
+        "item": "Garlic Naan",
+        "price": 59.00
+      },
+      "cart_before": [
+        {"name": "Chicken Biryani", "price": 299.00, "qty": 1, "added_by": "user"}
+      ],
+      "cart_after": [
+        {"name": "Chicken Biryani", "price": 299.00, "qty": 1, "added_by": "user"},
+        {"name": "Garlic Naan",     "price": 59.00,  "qty": 1, "added_by": "user"}
+      ]
+    },
+    {
+      "event_id": "evt_004",
+      "timestamp": "2024-01-15T19:02:10",
+      "event_type": "user_click",
+      "page": "restaurant_menu",
+      "user_action": {
+        "type": "proceed_to_checkout",
+        "item": null,
+        "price": null
+      },
+      "cart_before": [
+        {"name": "Chicken Biryani", "price": 299.00, "qty": 1, "added_by": "user"},
+        {"name": "Garlic Naan",     "price": 59.00,  "qty": 1, "added_by": "user"}
+      ],
+      "cart_after": [
+        {"name": "Chicken Biryani",              "price": 299.00, "qty": 1, "added_by": "user"},
+        {"name": "Garlic Naan",                  "price": 59.00,  "qty": 1, "added_by": "user"},
+        {"name": "Zomato Pro Trial - ₹99/month", "price": 99.00,  "qty": 1, "added_by": "system"},
+        {"name": "Donate ₹5 to Feed India",      "price": 5.00,   "qty": 1, "added_by": "system"}
+      ]
+    },
+    {
+      "event_id": "evt_005",
+      "timestamp": "2024-01-15T19:02:30",
+      "event_type": "page_load",
+      "page": "checkout",
+      "user_action": null,
+      "cart_before": [
+        {"name": "Chicken Biryani",              "price": 299.00, "qty": 1, "added_by": "user"},
+        {"name": "Garlic Naan",                  "price": 59.00,  "qty": 1, "added_by": "user"},
+        {"name": "Zomato Pro Trial - ₹99/month", "price": 99.00,  "qty": 1, "added_by": "system"},
+        {"name": "Donate ₹5 to Feed India",      "price": 5.00,   "qty": 1, "added_by": "system"}
+      ],
+      "cart_after": [
+        {"name": "Chicken Biryani",              "price": 299.00, "qty": 1, "added_by": "user"},
+        {"name": "Garlic Naan",                  "price": 59.00,  "qty": 1, "added_by": "user"},
+        {"name": "Zomato Pro Trial - ₹99/month", "price": 99.00,  "qty": 1, "added_by": "system"},
+        {"name": "Donate ₹5 to Feed India",      "price": 5.00,   "qty": 1, "added_by": "system"}
+      ]
+    }
+  ],
+  "page_checkboxes": [
+    {
+      "label":        "Add Zomato Pro trial (₹99/month, auto-renews)",
+      "pre_checked":  true,
+      "user_changed": false,
+      "location":     "below cart summary"
+    },
+    {
+      "label":        "Donate ₹5 to Feed India",
+      "pre_checked":  true,
+      "user_changed": false,
+      "location":     "checkout footer"
+    }
+  ]
+}

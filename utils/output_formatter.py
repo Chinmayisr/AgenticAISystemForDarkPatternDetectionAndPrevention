@@ -430,3 +430,233 @@ def print_pricing_detection_summary(result: dict, input_file: str):
             border_style="blue"
         ))
     console.print()   
+
+
+def print_behavioral_header(input_file: str):
+    console.print()
+    console.print(Rule("[bold blue]DARK GUARD AI — Behavioral Agent[/bold blue]", style="blue"))
+    console.print(f"[dim]Analyzing session:[/dim] [cyan]{input_file}[/cyan]")
+    console.print(Rule(style="blue"))
+    console.print()
+
+
+def print_behavioral_detection_summary(result: dict, input_file: str):
+    detections = result.get("detections", [])
+    summary = result.get("session_summary", "")
+
+    console.print()
+    console.print(Rule(
+        "[bold]BEHAVIORAL DETECTION REPORT[/bold]",
+        style="red" if detections else "green"
+    ))
+    console.print()
+
+    if not detections:
+        console.print(Panel(
+            "[bold green]✓ No behavioral dark patterns detected[/bold green]\n"
+            "[dim]This session appears behaviorally clean.[/dim]",
+            border_style="green"
+        ))
+        if summary:
+            console.print(Panel(
+                f"[dim]{summary}[/dim]",
+                title="[bold]Session Summary[/bold]",
+                border_style="blue"
+            ))
+        console.print()
+        return
+
+    total = len(detections)
+    high = sum(1 for d in detections if d.get("confidence", 0) >= 0.80)
+    medium = sum(1 for d in detections if 0.55 <= d.get("confidence", 0) < 0.80)
+
+    console.print(Panel(
+        f"[bold red]{total} behavioral dark pattern(s) detected[/bold red]\n\n"
+        f"[red]● High confidence (≥80%):[/red]    {high}\n"
+        f"[yellow]● Medium confidence (55-79%):[/yellow] {medium}",
+        title="[bold]Summary[/bold]",
+        border_style="red"
+    ))
+    console.print()
+
+    for i, det in enumerate(detections, 1):
+        confidence = det.get("confidence", 0)
+        color = "red" if confidence >= 0.80 else "yellow" if confidence >= 0.55 else "dim"
+        evidence = det.get("behavioral_evidence", {})
+
+        signals = evidence.get("signals_found", [])
+        evidence_lines = "\n".join(
+            f"  [dim]•[/dim] {signal}" for signal in signals[:5]
+        )
+        if evidence.get("key_metric"):
+            evidence_lines += (
+                ("\n" if evidence_lines else "") +
+                f"  [dim]•[/dim] Key metric: [bold]{evidence['key_metric']}[/bold]"
+            )
+        if evidence.get("affected_items"):
+            evidence_lines += (
+                ("\n" if evidence_lines else "") +
+                f"  [dim]•[/dim] Affected items: {', '.join(evidence['affected_items'])}"
+            )
+
+        content = (
+            f"[bold]Pattern ID:[/bold]   {det.get('pattern_id')}\n"
+            f"[bold]Confidence:[/bold]   [{color}]{confidence:.0%}[/{color}]\n"
+            f"[bold]Risk Level:[/bold]   [{color}]{det.get('risk_level', '?').upper()}[/{color}]\n\n"
+            f"[bold]Behavioral Evidence:[/bold]\n"
+            f"{evidence_lines}\n\n"
+            f"[bold]What happened:[/bold]\n  {det.get('explanation', '')}\n\n"
+            f"[bold]What you should do:[/bold]\n  [green]{det.get('prevention', '')}[/green]"
+        )
+
+        console.print(Panel(
+            content,
+            title=f"[bold {color}]#{i} — {det.get('pattern_name')} ({det.get('pattern_id')})[/bold {color}]",
+            border_style=color
+        ))
+        console.print()
+
+    if summary:
+        console.print(Panel(
+            f"[dim]{summary}[/dim]",
+            title="[bold]Session Summary[/bold]",
+            border_style="blue"
+        ))
+        console.print()
+
+    # Append to utils/output_formatter.py
+
+def print_behavioral_header(input_file: str):
+    console.print()
+    console.print(Rule("[bold blue]DARK GUARD AI — Behavioral Agent[/bold blue]", style="blue"))
+    console.print(f"[dim]Analyzing:[/dim] [cyan]{input_file}[/cyan]")
+    console.print(Rule(style="blue"))
+    console.print()
+
+
+def print_behavioral_detection_summary(result: dict, input_file: str):
+    detections = result.get("detections", [])
+    ctx        = result.get("analysis_context", {})
+    summary    = result.get("session_summary", "")
+
+    console.print()
+    console.print(Rule(
+        "[bold]BEHAVIORAL DETECTION REPORT[/bold]",
+        style="red" if detections else "green"
+    ))
+    console.print()
+
+    # ── Pre-analysis flags table ───────────────────────────────────────────
+    flag_table = Table(
+        title="Pre-Analysis Signals",
+        box=box.ROUNDED,
+        border_style="blue"
+    )
+    flag_table.add_column("Pattern",    style="bold", width=22)
+    flag_table.add_column("Data Found", justify="center", width=12)
+    flag_table.add_column("Triggered",  justify="center", width=12)
+    flag_table.add_column("Severity",   justify="center", width=10)
+
+    checks = {
+        "DP02 - Basket Sneaking":   ctx.get("basket_sneaking", {}),
+        "DP05 - Subscription Trap": ctx.get("subscription_trap", {}),
+        "DP12 - SaaS Billing":      ctx.get("saas_billing", {}),
+        "DP10 - Nagging":           ctx.get("nagging", {}),
+    }
+    for name, data in checks.items():
+        has_data  = data.get("has_data", False)
+        triggered = data.get("triggered", False)
+        severity  = data.get("severity", data.get("overall_severity", "none"))
+        color     = "red" if triggered else "green"
+        sev_color = "red" if severity == "high" else "yellow" if severity == "medium" else "dim"
+        flag_table.add_row(
+            name,
+            "[green]Yes[/green]" if has_data else "[dim]No[/dim]",
+            f"[{color}]{'⚠ YES' if triggered else '✓ No'}[/{color}]",
+            f"[{sev_color}]{severity.upper() if severity != 'none' else '—'}[/{sev_color}]"
+        )
+
+    console.print(flag_table)
+    console.print()
+
+    if not detections:
+        console.print(Panel(
+            "[bold green]✓ No behavioral dark patterns detected[/bold green]\n"
+            "[dim]This session appears to be clean.[/dim]",
+            border_style="green"
+        ))
+        if summary:
+            console.print(Panel(f"[dim]{summary}[/dim]",
+                                title="Session Summary", border_style="blue"))
+        return
+
+    total  = len(detections)
+    high   = sum(1 for d in detections if d.get("confidence", 0) >= 0.80)
+    medium = sum(1 for d in detections if 0.55 <= d.get("confidence", 0) < 0.80)
+
+    console.print(Panel(
+        f"[bold red]{total} behavioral dark pattern(s) detected[/bold red]\n\n"
+        f"[red]● High confidence (≥80%):[/red]    {high}\n"
+        f"[yellow]● Medium confidence (55-79%):[/yellow] {medium}",
+        title="[bold]Summary[/bold]",
+        border_style="red"
+    ))
+    console.print()
+
+    for i, det in enumerate(detections, 1):
+        confidence = det.get("confidence", 0)
+        color      = "red" if confidence >= 0.80 else "yellow" if confidence >= 0.55 else "dim"
+        evidence   = det.get("behavioral_evidence", {})
+
+        signals = "\n".join(
+            f"  [dim]•[/dim] {s}"
+            for s in evidence.get("signals_found", [])[:5]
+        )
+        affected = ", ".join(evidence.get("affected_items", [])[:4])
+        key_metric = evidence.get("key_metric", "")
+
+        content = (
+            f"[bold]Pattern ID:[/bold]   {det.get('pattern_id')}\n"
+            f"[bold]Confidence:[/bold]   [{color}]{confidence:.0%}[/{color}]\n"
+            f"[bold]Risk Level:[/bold]   [{color}]{det.get('risk_level','?').upper()}[/{color}]\n\n"
+            + (f"[bold]Key Metric:[/bold]   [red]{key_metric}[/red]\n\n" if key_metric else "")
+            + (f"[bold]Behavioral Signals:[/bold]\n{signals}\n\n" if signals else "")
+            + (f"[bold]Items Involved:[/bold]   {affected}\n\n" if affected else "")
+            + f"[bold]What happened:[/bold]\n  {det.get('explanation', '')}\n\n"
+            + f"[bold]What you should do:[/bold]\n  [green]{det.get('prevention', '')}[/green]"
+        )
+
+        console.print(Panel(
+            content,
+            title=f"[bold {color}]#{i} — {det.get('pattern_name')} ({det.get('pattern_id')})[/bold {color}]",
+            border_style=color
+        ))
+        console.print()
+
+    table = Table(title="All Behavioral Detections", box=box.ROUNDED,
+                  border_style="blue", show_lines=True)
+    table.add_column("#",            style="bold",        width=3)
+    table.add_column("Pattern ID",   style="bold yellow", width=8)
+    table.add_column("Pattern Name", style="bold",        width=22)
+    table.add_column("Confidence",   justify="center",    width=12)
+    table.add_column("Risk",         justify="center",    width=8)
+
+    for i, det in enumerate(detections, 1):
+        conf  = det.get("confidence", 0)
+        color = "red" if conf >= 0.80 else "yellow" if conf >= 0.55 else "dim"
+        table.add_row(
+            str(i),
+            det.get("pattern_id", ""),
+            det.get("pattern_name", ""),
+            f"[{color}]{conf:.0%}[/{color}]",
+            f"[{color}]{det.get('risk_level','?').upper()}[/{color}]"
+        )
+
+    console.print(table)
+
+    if summary:
+        console.print()
+        console.print(Panel(f"[dim]{summary}[/dim]",
+                            title="[bold]Session Analysis Summary[/bold]",
+                            border_style="blue"))
+    console.print()
