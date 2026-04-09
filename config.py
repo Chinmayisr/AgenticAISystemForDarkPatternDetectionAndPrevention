@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     orchestrator_model: str = Field("gemini-2.5-flash", env="ORCHESTRATOR_MODEL")
     nlp_agent_model: str = Field("gemini-2.5-flash", env="NLP_AGENT_MODEL")
     visual_agent_model: str = Field("gemini-2.5-flash", env="VISUAL_AGENT_MODEL")
-    pricing_agent_model: str = Field("gemini-2.5-flash", env="PRICING_AGENT_MODEL")
-    prevention_model: str = Field("ggemini-2.5-flash", env="PREVENTION_MODEL")
+    pricing_agent_model: str = Field("gemini-2.5-flash-lite", env="PRICING_AGENT_MODEL")
+    prevention_model: str = Field("gemini-2.5-flash", env="PREVENTION_MODEL")
 
     # Storage
     redis_url: str = Field("redis://localhost:6379", env="REDIS_URL")

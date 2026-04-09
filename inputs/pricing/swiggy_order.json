@@ -1,0 +1,41 @@
+
+{
+  "session_id": "test_session_001",
+  "platform": "swiggy",
+  "url": "https://www.swiggy.com/checkout",
+  "funnel_stages": [
+    {
+      "stage": "product_page",
+      "page_url": "https://www.swiggy.com/restaurant/burger-king",
+      "items": [
+        {"name": "Whopper Meal", "quantity": 1, "price": 299.00},
+        {"name": "Large Fries",  "quantity": 1, "price": 99.00}
+      ],
+      "displayed_total": 398.00,
+      "fees_shown": [],
+      "timestamp": "2024-01-15T18:00:00"
+    },
+    {
+      "stage": "cart",
+      "page_url": "https://www.swiggy.com/cart",
+      "items": [
+        {"name": "Whopper Meal", "quantity": 1, "price": 299.00},
+        {"name": "Large Fries",  "quantity": 1, "price": 99.00}
+      ],
+      "displayed_total": 398.00,
+      "fees_shown": [],
+      "timestamp": "2024-01-15T18:02:00"
+    },
+    {
+      "stage": "checkout",
+      "page_url": "https://www.swiggy.com/checkout",
+      "items": [
+        {"name": "Whopper Meal", "quantity": 1, "price": 329.00},
+        {"name": "Large Fries",  "quantity": 1, "price": 119.00}
+      ],
+      "displayed_total": 448.00,
+      "fees_shown": [],
+      "timestamp": "2024-01-15T18:05:00"
+    }
+  ]
+}

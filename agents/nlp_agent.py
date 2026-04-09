@@ -33,6 +33,46 @@ if client is None:
 from .pattern_definitions import PATTERN_DEFINITIONS
 from utils.text_extractor import TextExtractor
 
+
+def _is_quota_error(exc):
+    message = str(exc).lower()
+    if "quota exceeded" in message or "resource_exhausted" in message:
+        return True
+
+    try:
+        exceptions_module = importlib.import_module("google.api_core.exceptions")
+        return isinstance(exc, getattr(exceptions_module, "ResourceExhausted", Exception))
+    except ImportError:
+        return False
+    except Exception:
+        return False
+
+
+def _is_service_unavailable_error(exc):
+    message = str(exc).lower()
+    return (
+        "503 unavailable" in message or
+        "status': 'unavailable'" in message or
+        "currently experiencing high demand" in message
+    )
+
+
+def _is_permission_denied_error(exc):
+    message = str(exc).lower()
+    return (
+        "403 permission_denied" in message or
+        "permission denied" in message or
+        "project has been denied access" in message
+    )
+
+
+def _extract_retry_delay_seconds(exc) -> int | None:
+    message = str(exc)
+    match = re.search(r"retry in\s+(\d+(?:\.\d+)?)s", message, re.IGNORECASE)
+    if match:
+        return max(1, int(float(match.group(1))))
+    return None
+
 NLP_AGENT_TOOLS = [
     {
         "name": "scan_text_for_pattern",
@@ -343,21 +383,50 @@ async def run_nlp_agent(text: str, verbose: bool = True) -> Dict:
         f"Do not include any other text."
     )
 
-    if GOOGLE_GENAI_PACKAGE == "genai":
-        response = client.models.generate_content(
-            model=settings.nlp_agent_model,
-            contents=prompt,
-        )
-        final_text = getattr(response, "text", None) or str(response)
-    elif GOOGLE_GENAI_PACKAGE == "generativeai":
-        model = client.GenerativeModel(settings.nlp_agent_model)
-        response = model.generate_content(prompt)
-        final_text = getattr(response, "text", None) or str(response)
-    else:
-        raise RuntimeError(
-            "No supported Google GenAI API surface found. "
-            "Install google-genai or use a supported google.generativeai version."
-        )
+    attempts = 0
+    while True:
+        try:
+            if GOOGLE_GENAI_PACKAGE == "genai":
+                response = client.models.generate_content(
+                    model=settings.nlp_agent_model,
+                    contents=prompt,
+                )
+                final_text = getattr(response, "text", None) or str(response)
+            elif GOOGLE_GENAI_PACKAGE == "generativeai":
+                model = client.GenerativeModel(settings.nlp_agent_model)
+                response = model.generate_content(prompt)
+                final_text = getattr(response, "text", None) or str(response)
+            else:
+                raise RuntimeError(
+                    "No supported Google GenAI API surface found. "
+                    "Install google-genai or use a supported google.generativeai version."
+                )
+            break
+        except Exception as exc:
+            attempts += 1
+            if _is_quota_error(exc):
+                retry_delay = _extract_retry_delay_seconds(exc)
+                if retry_delay is not None and attempts <= 1:
+                    await asyncio.sleep(retry_delay)
+                    continue
+                raise RuntimeError(
+                    "Gemini quota exhausted for the NLP Agent. "
+                    "Please retry after the rate-limit window or use a lower-traffic model."
+                ) from exc
+            if _is_service_unavailable_error(exc):
+                if attempts <= 1:
+                    await asyncio.sleep(3)
+                    continue
+                raise RuntimeError(
+                    "Gemini is temporarily unavailable for the NLP Agent. "
+                    "Please retry in a little while."
+                ) from exc
+            if _is_permission_denied_error(exc):
+                raise RuntimeError(
+                    "Gemini access was denied for the NLP Agent. "
+                    "Please verify that your API key is valid and that the linked Google project has Gemini API access enabled."
+                ) from exc
+            raise
 
     final_result = _parse_fallback_response(final_text)
     return final_result

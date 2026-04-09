@@ -253,4 +253,180 @@ def print_visual_detection_summary(result: dict, image_path: str):
         )
 
     console.print(table)
-    console.print()        
+    console.print()     
+
+    # Append to utils/output_formatter.py
+
+def print_pricing_header(input_file: str):
+    console.print()
+    console.print(Rule("[bold blue]DARK GUARD AI — Pricing Agent[/bold blue]", style="blue"))
+    console.print(f"[dim]Analyzing:[/dim] [cyan]{input_file}[/cyan]")
+    console.print(Rule(style="blue"))
+    console.print()
+
+
+def print_pricing_detection_summary(result: dict, input_file: str):
+    """Print full pricing agent detection report."""
+    detections   = result.get("detections", [])
+    ctx          = result.get("analysis_context", {})
+    summary      = result.get("funnel_summary", "")
+    unexplained  = result.get("total_unexplained_increase", 0.0)
+
+    console.print()
+    console.print(Rule(
+        "[bold]PRICING DETECTION REPORT[/bold]",
+        style="red" if detections else "green"
+    ))
+    console.print()
+
+    # ── Funnel progression table ───────────────────────────────────────────
+    progression = ctx.get("total_progression", [])
+    if progression:
+        prog_table = Table(
+            title="Price Progression Across Funnel",
+            box=box.ROUNDED,
+            border_style="blue"
+        )
+        prog_table.add_column("Stage",          style="bold", width=16)
+        prog_table.add_column("Item Subtotal",  justify="right", width=16)
+        prog_table.add_column("Fees Total",     justify="right", width=14)
+        prog_table.add_column("Displayed Total",justify="right", width=16)
+        prog_table.add_column("Change",         justify="right", width=10)
+
+        prev_total = None
+        for p in progression:
+            displayed = p["displayed_total"]
+            change    = ""
+            if prev_total is not None:
+                diff  = displayed - prev_total
+                color = "red" if diff > 0 else "green" if diff < 0 else "dim"
+                change = f"[{color}]{'+' if diff > 0 else ''}{diff:.2f}[/{color}]"
+            prog_table.add_row(
+                p["stage"],
+                f"{p['item_subtotal']:.2f}",
+                f"{p['fees_total']:.2f}",
+                f"[bold]{displayed:.2f}[/bold]",
+                change
+            )
+            prev_total = displayed
+
+        console.print(prog_table)
+        console.print()
+
+    # ── No patterns found ─────────────────────────────────────────────────
+    if not detections:
+        console.print(Panel(
+            "[bold green]✓ No pricing dark patterns detected[/bold green]\n"
+            "[dim]Prices are consistent and all fees were disclosed early.[/dim]",
+            border_style="green"
+        ))
+        if summary:
+            console.print(Panel(
+                f"[dim]{summary}[/dim]",
+                title="[bold]Funnel Summary[/bold]",
+                border_style="blue"
+            ))
+        return
+
+    # ── Summary panel ──────────────────────────────────────────────────────
+    total  = len(detections)
+    high   = sum(1 for d in detections if d.get("confidence", 0) >= 0.80)
+    medium = sum(1 for d in detections if 0.55 <= d.get("confidence", 0) < 0.80)
+
+    console.print(Panel(
+        f"[bold red]{total} pricing dark pattern(s) detected[/bold red]\n\n"
+        f"[red]● High confidence (≥80%):[/red]    {high}\n"
+        f"[yellow]● Medium confidence (55-79%):[/yellow] {medium}\n"
+        + (f"\n[bold]Total unexplained increase:[/bold] [red]{unexplained:.2f}[/red]"
+           if unexplained else ""),
+        title="[bold]Summary[/bold]",
+        border_style="red"
+    ))
+    console.print()
+
+    # ── Per-detection panels ───────────────────────────────────────────────
+    for i, det in enumerate(detections, 1):
+        confidence = det.get("confidence", 0)
+        color      = "red" if confidence >= 0.80 else "yellow" if confidence >= 0.55 else "dim"
+        evidence   = det.get("price_evidence", {})
+
+        # Build price evidence section
+        ev_lines = []
+        if evidence.get("reference_price") is not None:
+            ev_lines.append(
+                f"  [dim]•[/dim] Reference price: [bold]{evidence['reference_price']:.2f}[/bold]"
+            )
+        if evidence.get("final_price") is not None:
+            ev_lines.append(
+                f"  [dim]•[/dim] Final price:     [bold red]{evidence['final_price']:.2f}[/bold red]"
+            )
+        if evidence.get("difference") is not None:
+            ev_lines.append(
+                f"  [dim]•[/dim] Difference:      [bold red]+{evidence['difference']:.2f} "
+                f"({evidence.get('difference_pct', 0):.1f}%)[/bold red]"
+            )
+        if evidence.get("injected_fees"):
+            ev_lines.append(f"  [dim]•[/dim] Hidden fees injected:")
+            for fee in evidence["injected_fees"]:
+                ev_lines.append(
+                    f"       [red]- {fee.get('fee_name', fee.get('name','?'))}: "
+                    f"{fee.get('amount', 0):.2f}[/red]"
+                )
+        if evidence.get("affected_stages"):
+            ev_lines.append(
+                f"  [dim]•[/dim] Stages affected: "
+                f"{' → '.join(evidence['affected_stages'])}"
+            )
+
+        content = (
+            f"[bold]Pattern ID:[/bold]   {det.get('pattern_id')}\n"
+            f"[bold]Confidence:[/bold]   [{color}]{confidence:.0%}[/{color}]\n"
+            f"[bold]Risk Level:[/bold]   [{color}]{det.get('risk_level','?').upper()}[/{color}]\n\n"
+            f"[bold]Price Evidence:[/bold]\n"
+            + "\n".join(ev_lines) + "\n\n"
+            f"[bold]What happened:[/bold]\n  {det.get('explanation', '')}\n\n"
+            f"[bold]What you should do:[/bold]\n  [green]{det.get('prevention', '')}[/green]"
+        )
+
+        console.print(Panel(
+            content,
+            title=f"[bold {color}]#{i} — {det.get('pattern_name')} ({det.get('pattern_id')})[/bold {color}]",
+            border_style=color
+        ))
+        console.print()
+
+    # ── Summary table ──────────────────────────────────────────────────────
+    table = Table(
+        title="All Pricing Detections",
+        box=box.ROUNDED,
+        border_style="blue",
+        show_lines=True
+    )
+    table.add_column("#",            style="bold", width=3)
+    table.add_column("Pattern ID",   style="bold yellow", width=8)
+    table.add_column("Pattern Name", style="bold", width=20)
+    table.add_column("Confidence",   justify="center", width=12)
+    table.add_column("Risk",         justify="center", width=8)
+
+    for i, det in enumerate(detections, 1):
+        conf  = det.get("confidence", 0)
+        color = "red" if conf >= 0.80 else "yellow" if conf >= 0.55 else "dim"
+        table.add_row(
+            str(i),
+            det.get("pattern_id", ""),
+            det.get("pattern_name", ""),
+            f"[{color}]{conf:.0%}[/{color}]",
+            f"[{color}]{det.get('risk_level','?').upper()}[/{color}]"
+        )
+
+    console.print(table)
+
+    # ── Funnel summary ─────────────────────────────────────────────────────
+    if summary:
+        console.print()
+        console.print(Panel(
+            f"[dim]{summary}[/dim]",
+            title="[bold]Funnel Analysis Summary[/bold]",
+            border_style="blue"
+        ))
+    console.print()   

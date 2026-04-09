@@ -3,6 +3,7 @@
 import importlib
 import json
 import re
+import time
 from typing import Dict, List
 from config import get_settings
 from agents.visual_pattern_definitions import VISUAL_PATTERN_DEFINITIONS
@@ -15,17 +16,17 @@ client = None
 GOOGLE_GENAI_PACKAGE = None
 
 try:
-    genai_module = importlib.import_module("google.generativeai")
-    genai_module.configure(api_key=settings.google_api_key)
-    client = genai_module
+    genai_module = importlib.import_module("google.genai")
+    client = genai_module.Client(api_key=settings.google_api_key)
     genai = genai_module
-    GOOGLE_GENAI_PACKAGE = "generativeai"
+    GOOGLE_GENAI_PACKAGE = "genai"
 except ImportError:
     try:
-        genai_module = importlib.import_module("google.genai")
-        client = genai_module.Client(api_key=settings.google_api_key)
+        genai_module = importlib.import_module("google.generativeai")
+        genai_module.configure(api_key=settings.google_api_key)
+        client = genai_module
         genai = genai_module
-        GOOGLE_GENAI_PACKAGE = "genai"
+        GOOGLE_GENAI_PACKAGE = "generativeai"
     except ImportError as exc:
         raise ImportError(
             "Missing Google GenAI client library. Install it with: pip install google-genai"
@@ -98,6 +99,23 @@ def _is_quota_error(exc):
         return False
 
 
+def _is_service_unavailable_error(exc):
+    message = str(exc).lower()
+    return (
+        "503 unavailable" in message or
+        "status': 'unavailable'" in message or
+        "currently experiencing high demand" in message
+    )
+
+
+def _extract_retry_delay_seconds(exc) -> int | None:
+    message = str(exc)
+    match = re.search(r"retry in\s+(\d+(?:\.\d+)?)s", message, re.IGNORECASE)
+    if match:
+        return max(1, int(float(match.group(1))))
+    return None
+
+
 def _send_chat_message(chat, content):
     try:
         return chat.send_message(content)
@@ -107,6 +125,66 @@ def _send_chat_message(chat, content):
                 "Gemini quota exhausted. Please retry later or check your Google Cloud quota."
             ) from exc
         raise
+
+
+def _generate_visual_response(prompt: str, pil_image, *, max_retries: int = 1) -> str:
+    attempts = 0
+    while True:
+        try:
+            if GOOGLE_GENAI_PACKAGE == "genai":
+                response = client.models.generate_content(
+                    model=settings.visual_agent_model,
+                    contents=[prompt, pil_image],
+                )
+            elif GOOGLE_GENAI_PACKAGE == "generativeai":
+                model = genai.GenerativeModel(settings.visual_agent_model)
+                response = model.generate_content([prompt, pil_image])
+            else:
+                raise RuntimeError(
+                    "No supported Google GenAI API surface found. "
+                    "Install google-genai or use a supported google.generativeai version."
+                )
+
+            return getattr(response, "text", None) or str(response)
+        except Exception as exc:
+            attempts += 1
+            if _is_quota_error(exc):
+                retry_delay = _extract_retry_delay_seconds(exc)
+                if retry_delay is not None and attempts <= max_retries:
+                    time.sleep(retry_delay)
+                    continue
+                raise RuntimeError(
+                    "Gemini quota exhausted for the Visual Agent. "
+                    "Please retry after the rate-limit window or use a lower-traffic model."
+                ) from exc
+            if _is_service_unavailable_error(exc):
+                if attempts <= max_retries:
+                    time.sleep(3)
+                    continue
+                raise RuntimeError(
+                    "Gemini is temporarily unavailable for the Visual Agent. "
+                    "Please retry in a little while."
+                ) from exc
+            raise
+
+
+def _finalize_visual_result(parsed: dict) -> dict:
+    detections = _normalize_data(parsed.get("detections", []))
+    for det in detections:
+        if "risk_level" not in det:
+            conf = det.get("confidence", 0)
+            det["risk_level"] = (
+                "high"   if conf >= 0.80 else
+                "medium" if conf >= 0.55 else
+                "low"
+            )
+        if "prevention" not in det or not det["prevention"]:
+            det["prevention"] = _default_prevention(det.get("pattern_id", ""))
+    return {
+        "detections": detections,
+        "image_description": parsed.get("image_description", ""),
+        "summary": parsed.get("summary", "Parsed from response"),
+    }
 
 
 def _create_visual_model(**kwargs):
@@ -495,45 +573,45 @@ def run_visual_agent(image_path: str, verbose: bool = True) -> Dict:
     info       = image_data["info"]
     step("Image loaded", f"{info['width']}×{info['height']}px | {info['size_kb']}KB")
 
-    # ── Initialize Gemini model ────────────────────────────────────────────
-    model = _create_visual_model(
-        model_name=settings.visual_agent_model,
-        tools=[{
-            "function_declarations": VISUAL_AGENT_TOOLS
-        }],
-        system_instruction=_build_system_prompt(),
-    )
-
-    # ── Build initial message with image ──────────────────────────────────
     import PIL.Image
     import io
 
-    pil_image   = PIL.Image.open(io.BytesIO(image_data["bytes"]))
-    chat        = model.start_chat()
-    final_result = {
-        "detections":        [],
-        "image_description": "",
-        "summary":           "Analysis incomplete"
-    }
+    pil_image = PIL.Image.open(io.BytesIO(image_data["bytes"]))
+    step("Running single-pass visual analysis")
 
-    initial_message = (
-        "Analyze this website screenshot for dark patterns.\n\n"
-        "Follow your process:\n"
-        "1. Call get_visual_pattern_definition for DP06, DP09, and DP13\n"
-        "2. Call analyze_image_region for different element types\n"
-        "3. Call finalize_visual_detections with your confirmed findings\n\n"
-        "Begin your analysis now."
+    prompt = (
+        f"{_build_system_prompt()}\n\n"
+        "Analyze this website screenshot for visual dark patterns and return ONLY valid JSON.\n\n"
+        "Required JSON schema:\n"
+        "{\n"
+        '  "detections": [\n'
+        "    {\n"
+        '      "pattern_id": "DP06|DP09|DP13",\n'
+        '      "pattern_name": "string",\n'
+        '      "confidence": 0.0,\n'
+        '      "risk_level": "high|medium|low",\n'
+        '      "visual_evidence": [\n'
+        '        {"element": "string", "observation": "string", "location": "string"}\n'
+        "      ],\n"
+        '      "explanation": "string",\n'
+        '      "prevention": "string"\n'
+        "    }\n"
+        "  ],\n"
+        '  "image_description": "string",\n'
+        '  "summary": "string"\n'
+        "}\n\n"
+        "Rules:\n"
+        "- Detect ONLY DP06, DP09, and DP13.\n"
+        "- If there is no clear evidence, return an empty detections array.\n"
+        "- Base claims only on visible elements in the screenshot.\n"
+        "- Keep visual_evidence concrete and location-specific.\n"
+        "- Output JSON only, with no markdown fences."
     )
 
-    # ── Agentic loop ───────────────────────────────────────────────────────
-    max_iterations = 20
-    iteration      = 0
-
-    # Send initial message with image
     try:
-        response = _send_chat_message(chat, [initial_message, pil_image])
+        response_text = _generate_visual_response(prompt, pil_image)
     except RuntimeError as exc:
-        step("Quota error", "Initial Gemini request failed")
+        step("Quota error", "Visual analysis request failed")
         return {
             "detections":        [],
             "image_description": "",
@@ -541,112 +619,8 @@ def run_visual_agent(image_path: str, verbose: bool = True) -> Dict:
             "error":             str(exc)
         }
 
-    while iteration < max_iterations:
-        iteration += 1
-
-        # Check if Gemini wants to call a function
-        has_function_call = (
-            response.candidates and
-            response.candidates[0].content.parts and
-            any(hasattr(p, "function_call") and p.function_call.name
-                for p in response.candidates[0].content.parts)
-        )
-
-        if not has_function_call:
-            # Gemini finished without calling finalize — try to parse response
-            step("Agent completed — parsing response")
-            final_result = _parse_gemini_response(response.text)
-            break
-
-        # Process all function calls in this response
-        function_results = []
-
-        for part in response.candidates[0].content.parts:
-            if not (hasattr(part, "function_call") and part.function_call.name):
-                continue
-
-            fn_name  = part.function_call.name
-            fn_input = dict(part.function_call.args)
-
-            step(f"Agent calling tool", f"[{fn_name}]")
-
-            # ── Special handling for analyze_image_region ──────────────
-            if fn_name == "analyze_image_region":
-                # Run focused Gemini vision analysis for this region
-                region_type      = fn_input.get("region_type", "full_page_overview")
-                pattern_to_check = fn_input.get("pattern_to_check", "all")
-
-                # Use a simple model instance (no tools) for the focused call
-                focused_model = _create_visual_model(
-                    model_name=settings.visual_agent_model
-                )
-                try:
-                    observation = _analyze_region_with_gemini(
-                        image_data, region_type, pattern_to_check, focused_model
-                    )
-                except RuntimeError as exc:
-                    if _is_quota_error(exc):
-                        step("Quota error", "Gemini quota exhausted")
-                        return {
-                            "detections":        [],
-                            "image_description": "",
-                            "summary":           "Visual agent failed due to API quota or service error.",
-                            "error":             str(exc)
-                        }
-                    raise
-                tool_result = {
-                    "status":      "analysis_complete",
-                    "region":      region_type,
-                    "observation": observation
-                }
-            elif fn_name == "finalize_visual_detections":
-
-                # Send final tool result and exit
-                content_types = _get_content_types()
-                response = chat.send_message(
-                    content_types.to_content({
-                        "role":  "tool",
-                        "parts": [{
-                            "function_response": {
-                                "name":     fn_name,
-                                "response": tool_result
-                            }
-                        }]
-                    })
-                )
-                return final_result   # ← EXIT the loop
-
-            else:
-                tool_result = execute_visual_tool(fn_name, fn_input)
-
-            function_results.append({
-                "function_response": {
-                    "name":     fn_name,
-                    "response": tool_result
-                }
-            })
-
-        # Send all tool results back to Gemini
-        if function_results:
-            content_types = _get_content_types()
-            try:
-                response = _send_chat_message(
-                    chat,
-                    content_types.to_content({
-                        "role":  "tool",
-                        "parts": function_results
-                    })
-                )
-            except RuntimeError as exc:
-                step("Quota error", "Gemini quota exhausted while sending tool results")
-                return {
-                    "detections":        [],
-                    "image_description": "",
-                    "summary":           "Visual agent failed due to API quota or service error.",
-                    "error":             str(exc)
-                }
-
-    return final_result
+    step("Analysis complete", "Parsing model response")
+    return _finalize_visual_result(_parse_gemini_response(response_text))
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────

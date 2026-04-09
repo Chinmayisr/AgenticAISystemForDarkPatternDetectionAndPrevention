@@ -1,0 +1,41 @@
+
+{
+  "session_id": "test_session_002",
+  "platform": "amazon",
+  "url": "https://www.amazon.in/checkout",
+  "funnel_stages": [
+    {
+      "stage": "product_page",
+      "page_url": "https://www.amazon.in/product/headphones",
+      "items": [
+        {"name": "Sony WH-1000XM5 Headphones", "quantity": 1, "price": 24990.00}
+      ],
+      "displayed_total": 24990.00,
+      "fees_shown": [],
+      "timestamp": "2024-01-15T10:00:00"
+    },
+    {
+      "stage": "cart",
+      "page_url": "https://www.amazon.in/cart",
+      "items": [
+        {"name": "Sony WH-1000XM5 Headphones", "quantity": 1, "price": 24990.00}
+      ],
+      "displayed_total": 24990.00,
+      "fees_shown": [],
+      "timestamp": "2024-01-15T10:02:00"
+    },
+    {
+      "stage": "checkout",
+      "page_url": "https://www.amazon.in/checkout",
+      "items": [
+        {"name": "Sony WH-1000XM5 Headphones", "quantity": 1, "price": 24990.00}
+      ],
+      "displayed_total": 27489.00,
+      "fees_shown": [
+        {"name": "Handling Fee", "amount": 499.00},
+        {"name": "Import Duty",  "amount": 2000.00}
+      ],
+      "timestamp": "2024-01-15T10:05:00"
+    }
+  ]
+}

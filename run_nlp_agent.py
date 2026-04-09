@@ -8,6 +8,7 @@ import asyncio
 import sys
 import os
 import argparse
+import subprocess
 from datetime import datetime
 from rich.console import Console
 
@@ -49,7 +50,29 @@ async def main():
         print_header, print_detection_summary,
         print_agent_step, save_report, console
     )
-    from agents.nlp_agent import run_nlp_agent
+    try:
+        from agents.nlp_agent import run_nlp_agent
+    except ImportError:
+        venv_python = os.path.join(os.path.dirname(__file__), "denv", "Scripts", "python.exe")
+        current_python = os.path.abspath(sys.executable)
+
+        if os.path.exists(venv_python) and os.path.abspath(venv_python) != current_python:
+            console.print(
+                "[yellow]NLP agent dependencies were not found in the current Python. "
+                "Retrying with the local `denv` interpreter...[/yellow]"
+            )
+            raise SystemExit(
+                subprocess.call([venv_python, __file__, *sys.argv[1:]])
+            )
+
+        console.print(
+            "[red]NLP agent dependencies are missing for this interpreter.[/red]"
+        )
+        console.print(
+            "[dim]Use `denv\\Scripts\\python run_nlp_agent.py ...` "
+            "or install requirements into the current Python environment.[/dim]"
+        )
+        raise
 
     # ── Load and clean input ───────────────────────────────────────────────
     print_header(args.input_file)
@@ -64,10 +87,15 @@ async def main():
     # ── Run NLP Agent ──────────────────────────────────────────────────────
     start_time = datetime.now()
 
-    result = await run_nlp_agent(
-        text=clean_text,
-        verbose=not args.quiet
-    )
+    try:
+        result = await run_nlp_agent(
+            text=clean_text,
+            verbose=not args.quiet
+        )
+    except RuntimeError as exc:
+        console.print()
+        console.print(f"[red]NLP agent error:[/red] {exc}")
+        raise SystemExit(1)
 
     elapsed = (datetime.now() - start_time).total_seconds()
 
